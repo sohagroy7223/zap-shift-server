@@ -1,12 +1,29 @@
 const express = require("express");
-var cors = require("cors");
+const cors = require("cors");
 const app = express();
+const { MongoClient } = require("mongodb");
 require("dotenv").config();
+
 const port = process.env.PORT || 3000;
 
 // meddleWare
 app.use(express.json());
 app.use(cors());
+
+const client = new MongoClient(
+  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@crud-practice-cluster.l3ixzxm.mongodb.net/?appName=crud-practice-cluster&compressors=zlib`,
+);
+
+async function connectToMongoDB() {
+  try {
+    await client.connect();
+    console.log("You successfully connected to MongoDB!");
+    return client;
+  } catch (err) {
+    console.dir(err);
+  }
+}
+connectToMongoDB();
 
 app.get("/", (req, res) => {
   res.send("zap ship is running");
