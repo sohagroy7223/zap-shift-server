@@ -20,14 +20,20 @@ async function connectToMongoDB() {
     const zapDB = client.db("zap_shift_db");
     const parcelCollection = zapDB.collection("parcels");
 
-    app.get("/parcel", async (req, res) => {
-      const cursor = parcelCollection.find();
+    app.get("/parcels", async (req, res) => {
+      const query = {};
+      const { email } = req.query;
+      if (email) {
+        query.senderEmail = email;
+      }
+      const cursor = parcelCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.post("/parcel", async (req, res) => {
+    app.post("/parcels", async (req, res) => {
       const parcel = req.body;
+      9;
       const result = await parcelCollection.insertOne(parcel);
       res.send(result);
     });
