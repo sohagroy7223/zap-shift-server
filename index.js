@@ -17,6 +17,17 @@ const client = new MongoClient(
 async function connectToMongoDB() {
   try {
     await client.connect();
+    const zapDB = client.db("zap_shift_db");
+    const parcelCollection = zapDB.collection("parcels");
+
+    app.get("/parcel", async (req, res) => {});
+
+    app.post("/parcel", async (req, res) => {
+      const parcel = req.body;
+      const result = await parcelCollection.insertOne(parcel);
+      res.send(result);
+    });
+
     console.log("You successfully connected to MongoDB!");
     return client;
   } catch (err) {
