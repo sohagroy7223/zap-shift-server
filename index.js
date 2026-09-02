@@ -6,6 +6,8 @@ require("dotenv").config();
 
 const port = process.env.PORT || 3000;
 
+const stripe = require("stripe")(process.env.STRIPE_SECRETE);
+
 // meddleWare
 app.use(express.json());
 app.use(cors());
@@ -40,6 +42,13 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
+    app.get("/parcels/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await parcelCollection.findOne(query);
+      res.send(result);
+    });
+
     app.delete("/parcels/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -47,11 +56,31 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
-    app.get("/parcels/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await parcelCollection.findOne(query);
-      res.send(result);
+    app.post("/create-checkout-session", async (req, res) => {
+      const paymentInfo = req.body;
+
+      const amount = parseInt(paymentInfo.cost) * 100;
+
+      const session = await stripe.checkout.sessions.create({
+        line_items: [
+          {
+            price_data: {
+              currency: "USD",
+              unit_amount: amount,
+              product_data: {
+                name: paymentInfo.parcelName,
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        customer_email: paymentInfo.senderEmail,
+        mode: "payment",
+        success_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-success`,
+        cancel_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-cancel`,
+      });
+      console.log(session);
+      res.send({ url: session.url });
     });
 
     console.log("You successfully connected to MongoDB!");
