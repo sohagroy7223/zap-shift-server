@@ -56,16 +56,15 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
-    app.post("/create-checkout-session", async (req, res) => {
+    app.post("/payment-checkout-section", async (req, res) => {
       const paymentInfo = req.body;
 
       const amount = parseInt(paymentInfo.cost) * 100;
-
-      const session = await stripe.checkout.sessions.create({
+      const section = await stripe.checkout.sessions.create({
         line_items: [
           {
             price_data: {
-              currency: "USD",
+              currency: "usd",
               unit_amount: amount,
               product_data: {
                 name: paymentInfo.parcelName,
@@ -74,14 +73,46 @@ async function connectToMongoDB() {
             quantity: 1,
           },
         ],
-        customer_email: paymentInfo.senderEmail,
         mode: "payment",
-        success_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-success`,
+        metadata: {
+          parcelId: paymentInfo._id,
+        },
+        customer_email: paymentInfo.senderEmail,
+        success_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-cancel`,
       });
-      console.log(session);
-      res.send({ url: session.url });
+      console.log(section);
+      res.send({ url: section.url });
     });
+
+    // old payment section
+
+    // app.post("/create-checkout-session", async (req, res) => {
+    //   const paymentInfo = req.body;
+
+    //   const amount = parseInt(paymentInfo.cost) * 100;
+
+    //   const session = await stripe.checkout.sessions.create({
+    //     line_items: [
+    //       {
+    //         price_data: {
+    //           currency: "USD",
+    //           unit_amount: amount,
+    //           product_data: {
+    //             name: paymentInfo.parcelName,
+    //           },
+    //         },
+    //         quantity: 1,
+    //       },
+    //     ],
+    //     customer_email: paymentInfo.senderEmail,
+    //     mode: "payment",
+    //     success_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-success`,
+    //     cancel_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-cancel`,
+    //   });
+    //   console.log(session);
+    //   res.send({ url: session.url });
+    // });
 
     console.log("You successfully connected to MongoDB!");
     return client;
