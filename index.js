@@ -75,7 +75,7 @@ async function connectToMongoDB() {
         ],
         mode: "payment",
         metadata: {
-          parcelId: paymentInfo._id,
+          parcelId: paymentInfo.parcelId,
         },
         customer_email: paymentInfo.senderEmail,
         success_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
@@ -113,6 +113,26 @@ async function connectToMongoDB() {
     //   console.log(session);
     //   res.send({ url: session.url });
     // });
+
+    app.patch("/payment-success", async (req, res) => {
+      const sessionId = req.query.session_id;
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+      if (session.payment_status === "paid") {
+        const id = session.metadata.parcelId;
+        const query = { _id: new ObjectId(id) };
+        const update = {
+          $set: {
+            paymentStatus: "paid",
+          },
+        };
+        const result = await parcelCollection.updateOne(query, update);
+        res.send(result);
+      }
+
+      res.send({ success: false });
+    });
 
     console.log("You successfully connected to MongoDB!");
     return client;
