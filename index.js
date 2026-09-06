@@ -132,6 +132,24 @@ async function connectToMongoDB() {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       const trackingId = generateTrackingId();
 
+      if (session.payment_status !== "paid") {
+        return res.send({
+          success: false,
+        });
+      }
+
+      const paymentExist = await paymentCollection.findOne({
+        transactionId: session.payment_intent,
+      });
+
+      if (paymentExist) {
+        return res.send({
+          message: "this payment already exist",
+          transactionId: paymentExist.transactionId,
+          trackingId: paymentExist.trackingId,
+        });
+      }
+
       if (session.payment_status === "paid") {
         const id = session.metadata.parcelId;
         const query = { _id: new ObjectId(id) };
@@ -156,19 +174,6 @@ async function connectToMongoDB() {
           trackingId: trackingId,
         };
 
-        const transactionId = session.payment_intent;
-        const paymentId = { transactionId: transactionId };
-        const paymentExist = await paymentCollection.findOne(paymentId);
-
-        if (paymentExist) {
-          return res.send(
-            {
-              message: "this payment already exist",
-            },
-            transactionId,
-          );
-        }
-
         if (session.payment_status === "paid") {
           const resultPayment = await paymentCollection.insertOne(payment);
           res.send({
@@ -181,7 +186,7 @@ async function connectToMongoDB() {
         }
       }
 
-      res.send({ success: false });
+      // res.send({ success: false });
     });
 
     console.log("You successfully connected to MongoDB!");
