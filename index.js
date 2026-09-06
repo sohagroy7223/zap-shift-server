@@ -141,6 +141,7 @@ async function connectToMongoDB() {
             trackingId: trackingId,
           },
         };
+
         const result = await parcelCollection.updateOne(query, update);
 
         const payment = {
@@ -152,7 +153,21 @@ async function connectToMongoDB() {
           transactionId: session.payment_intent,
           paymentStatus: session.payment_status,
           paidAt: new Date(),
+          trackingId: trackingId,
         };
+
+        const transactionId = session.payment_intent;
+        const paymentId = { transactionId: transactionId };
+        const paymentExist = await paymentCollection.findOne(paymentId);
+
+        if (paymentExist) {
+          return res.send(
+            {
+              message: "this payment already exist",
+            },
+            transactionId,
+          );
+        }
 
         if (session.payment_status === "paid") {
           const resultPayment = await paymentCollection.insertOne(payment);
@@ -164,8 +179,6 @@ async function connectToMongoDB() {
             paymentInfo: resultPayment,
           });
         }
-
-        res.send(result);
       }
 
       res.send({ success: false });
