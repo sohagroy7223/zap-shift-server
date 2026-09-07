@@ -18,9 +18,17 @@ const generateTrackingId = () => {
 
 const stripe = require("stripe")(process.env.STRIPE_SECRETE);
 
-// meddleWare
+// middleWare
 app.use(express.json());
 app.use(cors());
+
+const verifyFirebaseToken = (req, res, next) => {
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).send({ message: "unAuthorize access" });
+  }
+  next();
+};
 
 const client = new MongoClient(
   `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@crud-practice-cluster.l3ixzxm.mongodb.net/?appName=crud-practice-cluster&compressors=zlib`,
@@ -93,7 +101,7 @@ async function connectToMongoDB() {
         success_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-cancel`,
       });
-      console.log(section);
+      // console.log(section);
       res.send({ url: section.url });
     });
 
@@ -191,7 +199,7 @@ async function connectToMongoDB() {
 
     // payments related apis
 
-    app.get("/payments", async (req, res) => {
+    app.get("/payments", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
       const query = {};
       if (email) {
