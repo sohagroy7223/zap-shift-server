@@ -74,8 +74,18 @@ async function connectToMongoDB() {
   try {
     await client.connect();
     const zapDB = client.db("zap_shift_db");
+    const userCollection = zapDB.collection("users");
     const parcelCollection = zapDB.collection("parcels");
     const paymentCollection = zapDB.collection("payments");
+
+    // user related apis
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      user.role = "user";
+      user.createdAt = new Date();
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
 
     app.get("/parcels", async (req, res) => {
       const query = {};
@@ -245,7 +255,7 @@ async function connectToMongoDB() {
           res.status(403).send({ message: "forbidden access" });
         }
       }
-      const cursor = paymentCollection.find(query);
+      const cursor = paymentCollection.find(query).sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
     });
