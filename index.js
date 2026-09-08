@@ -42,11 +42,27 @@ const stripe = require("stripe")(process.env.STRIPE_SECRETE);
 app.use(express.json());
 app.use(cors());
 
-const verifyFirebaseToken = (req, res, next) => {
-  const token = req.headers.authorization;
-  if (!token) {
-    return res.status(401).send({ message: "unAuthorize access" });
+const verifyFirebaseToken = async (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res.status(401).send({ message: "unauthorized access" });
   }
+
+  const token = authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+
+  // verify Id token
+  try {
+    const decoded = await getAuth().verifyIdToken(token);
+    // console.log("after decoded ", decoded);
+
+    req.tokenEmail = decoded.email;
+  } catch (error) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+
   next();
 };
 
@@ -224,10 +240,21 @@ async function connectToMongoDB() {
       const query = {};
       if (email) {
         query.customerEmail = email;
+        // check the email
+        if (email !== req.tokenEmail) {
+          res.status(403).send({ message: "forbidden access" });
+        }
       }
       const cursor = paymentCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+    app.all(/.*/, (req, res) => {
+      res.status(404).json({
+        status: 404,
+        error: "API not found",
+      });
     });
 
     console.log("You successfully connected to MongoDB!");
