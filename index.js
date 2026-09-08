@@ -83,6 +83,13 @@ async function connectToMongoDB() {
       const user = req.body;
       user.role = "user";
       user.createdAt = new Date();
+      const email = user.email;
+
+      const userExist = await userCollection.findOne({ email });
+      if (userExist) {
+        return res.send({ message: "this user already has login" });
+      }
+
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
