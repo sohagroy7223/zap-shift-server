@@ -99,7 +99,6 @@ async function connectToMongoDB() {
     app.post("/riders", async (req, res) => {
       const rider = req.body;
       const email = rider.email;
-      rider.role = "rider";
       rider.status = "pending";
       rider.createdAt = new Date();
       const existUser = await ridersCollection.findOne({ email });
@@ -117,6 +116,19 @@ async function connectToMongoDB() {
       }
       const cursor = ridersCollection.find(query);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.patch("/riders/:id", verifyFirebaseToken, async (req, res) => {
+      const status = req.body.status;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          status: status,
+        },
+      };
+      const result = await ridersCollection.updateOne(query, update);
       res.send(result);
     });
 
