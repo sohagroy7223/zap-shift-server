@@ -77,6 +77,7 @@ async function connectToMongoDB() {
     const userCollection = zapDB.collection("users");
     const parcelCollection = zapDB.collection("parcels");
     const paymentCollection = zapDB.collection("payments");
+    const ridersCollection = zapDB.collection("riders");
 
     // user related apis
     app.post("/users", async (req, res) => {
@@ -93,6 +94,23 @@ async function connectToMongoDB() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
+
+    // riders relayed apis
+    app.post("/riders", async (req, res) => {
+      const rider = req.body;
+      const email = rider.email;
+      rider.role = "rider";
+      rider.status = "pending";
+      rider.createdAt = new Date();
+      const existUser = await ridersCollection.findOne({ email });
+      if (existUser) {
+        return res.send({ message: "this riders already exist" });
+      }
+      const result = await ridersCollection.insertOne(rider);
+      res.send(result);
+    });
+
+    // payments related apis
 
     app.get("/parcels", async (req, res) => {
       const query = {};
