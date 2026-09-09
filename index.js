@@ -132,6 +132,13 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
+    app.delete("/riders/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await ridersCollection.deleteOne(query);
+      res.send(result);
+    });
+
     // payments related apis
 
     app.get("/parcels", async (req, res) => {
