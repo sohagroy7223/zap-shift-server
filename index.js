@@ -129,6 +129,17 @@ async function connectToMongoDB() {
         },
       };
       const result = await ridersCollection.updateOne(query, update);
+      if (status === "approved") {
+        const email = req.body.email;
+        const query = { email };
+        const updateUser = {
+          $set: {
+            role: "rider",
+          },
+        };
+        const userResult = await ridersCollection.updateOne(query, updateUser);
+        // res.send(userResult);
+      }
       res.send(result);
     });
 
