@@ -114,7 +114,7 @@ async function connectToMongoDB() {
       if (req.query.status) {
         query.status = req.query.status;
       }
-      const cursor = ridersCollection.find(query);
+      const cursor = ridersCollection.find(query).sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -137,7 +137,7 @@ async function connectToMongoDB() {
             role: "rider",
           },
         };
-        const userResult = await ridersCollection.updateOne(query, updateUser);
+        const userResult = await userCollection.updateOne(query, updateUser);
         // res.send(userResult);
       }
       res.send(result);
