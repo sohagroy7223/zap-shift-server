@@ -95,6 +95,12 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
+    app.get("/users", async (req, res) => {
+      const cursor = userCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     // riders relayed apis
     app.post("/riders", async (req, res) => {
       const rider = req.body;
