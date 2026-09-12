@@ -101,6 +101,13 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
+    app.get("/users/:email/role", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await userCollection.findOne(query);
+      res.send({ role: user?.role });
+    });
+
     app.patch("/users/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
