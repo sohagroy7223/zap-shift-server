@@ -79,6 +79,17 @@ async function connectToMongoDB() {
     const paymentCollection = zapDB.collection("payments");
     const ridersCollection = zapDB.collection("riders");
 
+    // middleware more with database access
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.tokenEmail;
+      const query = { email };
+      const user = await userCollection.findOne(query);
+      if (!user || user.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
     // user related apis
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -108,18 +119,23 @@ async function connectToMongoDB() {
       res.send({ role: user?.role });
     });
 
-    app.patch("/users/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const roleInfo = req.body;
-      const updatedDoc = {
-        $set: {
-          role: roleInfo.role,
-        },
-      };
-      const result = await userCollection.updateOne(query, updatedDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/users/:id/role",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const roleInfo = req.body;
+        const updatedDoc = {
+          $set: {
+            role: roleInfo.role,
+          },
+        };
+        const result = await userCollection.updateOne(query, updatedDoc);
+        res.send(result);
+      },
+    );
 
     // riders relayed apis
     app.post("/riders", async (req, res) => {
