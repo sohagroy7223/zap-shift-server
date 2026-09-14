@@ -110,7 +110,11 @@ async function connectToMongoDB() {
       const search = req.query.search;
       const query = {};
       if (search) {
-        query.displayName = { $regex: search, $options: "i" };
+        // query.displayName = { $regex: search, $options: "i" };
+        query.$or = [
+          { displayName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ];
       }
       const cursor = userCollection
         .find(query)
