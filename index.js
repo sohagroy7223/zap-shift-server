@@ -107,7 +107,15 @@ async function connectToMongoDB() {
     });
 
     app.get("/users", verifyFirebaseToken, async (req, res) => {
-      const cursor = userCollection.find();
+      const search = req.query.search;
+      const query = {};
+      if (search) {
+        query.displayName = { $regex: search, $options: "i" };
+      }
+      const cursor = userCollection
+        .find(query)
+        .limit(5)
+        .sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
     });
