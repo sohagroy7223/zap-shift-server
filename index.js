@@ -118,7 +118,7 @@ async function connectToMongoDB() {
       }
       const cursor = userCollection
         .find(query)
-        .limit(5)
+        .limit(10)
         .sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
@@ -208,9 +208,13 @@ async function connectToMongoDB() {
 
     app.get("/parcels", async (req, res) => {
       const query = {};
-      const { email } = req.query;
+      const { email, deliveryStatus } = req.query;
       if (email) {
         query.senderEmail = email;
+      }
+
+      if (deliveryStatus) {
+        query.deliveryStatus = deliveryStatus;
       }
 
       const options = { sort: { createdAt: -1 } };
@@ -329,6 +333,7 @@ async function connectToMongoDB() {
         const update = {
           $set: {
             paymentStatus: "paid",
+            deliveryStatus: "pending-pickup",
             trackingId: trackingId,
           },
         };
