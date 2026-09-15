@@ -180,6 +180,7 @@ async function connectToMongoDB() {
       const update = {
         $set: {
           status: status,
+          workStatus: "available",
         },
       };
       const result = await ridersCollection.updateOne(query, update);
