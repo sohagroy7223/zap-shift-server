@@ -245,7 +245,7 @@ async function connectToMongoDB() {
         query.riderEmail = riderEmail;
       }
       if (deliveryStatus) {
-        query.deliveryStatus = deliveryStatus;
+        query.deliveryStatus = { $in: ["delivery_assign", "rider-arriving"] };
       }
       const cursor = parcelCollection.find(query);
       const result = await cursor.toArray();
@@ -285,7 +285,7 @@ async function connectToMongoDB() {
         riderQuery,
         riderUpdateDoc,
       );
-      res.send(riderResult);
+      res.send(riderResult, result);
     });
 
     app.patch("/parcels/:id/status", async (req, res) => {
@@ -299,6 +299,44 @@ async function connectToMongoDB() {
       };
       const result = await parcelCollection.updateOne(query, updatedDoc);
       res.send(result);
+    });
+
+    app.patch("/parcels/:id/reject", async (req, res) => {
+      const id = req.params.id;
+      const parcelQuery = { _id: new ObjectId(id) };
+      const parcel = await parcelCollection.findOne(parcelQuery);
+      const riderId = parcel.riderId;
+
+      // parcel update
+      const parcelUpdateDoc = {
+        $set: {
+          deliveryStatus: "pending-pickup",
+        },
+        $unset: {
+          riderEmail: "",
+          riderId: "",
+          riderName: "",
+        },
+      };
+      const parcelResult = await parcelCollection.updateOne(
+        parcelQuery,
+        parcelUpdateDoc,
+      );
+
+      // update rider
+
+      const rider = { _id: new ObjectId(riderId) };
+      const riderQuery = await ridersCollection.findOne(rider);
+      const updateRIderDoc = {
+        $set: {
+          workStatus: "available",
+        },
+      };
+      const result = await ridersCollection.updateOne(
+        riderQuery,
+        updateRIderDoc,
+      );
+      res.send(parcelResult, result);
     });
 
     app.delete("/parcels/:id", async (req, res) => {
