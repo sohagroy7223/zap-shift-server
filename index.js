@@ -246,6 +246,7 @@ async function connectToMongoDB() {
       }
       if (deliveryStatus) {
         query.deliveryStatus = { $in: ["delivery_assign", "rider-arriving"] };
+        query.deliveryStatus = { $nin: ["parcel-delivered"] };
       }
       const cursor = parcelCollection.find(query);
       const result = await cursor.toArray();
@@ -274,7 +275,6 @@ async function connectToMongoDB() {
       const result = await parcelCollection.updateOne(query, parcelsUpdateDoc);
 
       // rider update
-
       const riderQuery = { _id: new ObjectId(riderId) };
       const riderUpdateDoc = {
         $set: {
@@ -289,7 +289,7 @@ async function connectToMongoDB() {
     });
 
     app.patch("/parcels/:id/status", async (req, res) => {
-      const { deliveryStatus } = req.body;
+      const { deliveryStatus, riderId } = req.body;
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -297,6 +297,20 @@ async function connectToMongoDB() {
           deliveryStatus: deliveryStatus,
         },
       };
+
+      if (deliveryStatus === "parcel-delivered") {
+        const riderQuery = { _id: new ObjectId(riderId) };
+        const riderUpdateDoc = {
+          $set: {
+            workStatus: "available",
+          },
+        };
+        const riderResult = await ridersCollection.updateOne(
+          riderQuery,
+          riderUpdateDoc,
+        );
+      }
+
       const result = await parcelCollection.updateOne(query, updatedDoc);
       res.send(result);
     });
