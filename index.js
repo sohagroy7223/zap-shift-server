@@ -78,6 +78,7 @@ async function connectToMongoDB() {
     const parcelCollection = zapDB.collection("parcels");
     const paymentCollection = zapDB.collection("payments");
     const ridersCollection = zapDB.collection("riders");
+    const trackingsCollection = zapDB.collection("trackings");
 
     // middleware more with database access
     const verifyAdmin = async (req, res, next) => {
@@ -88,6 +89,16 @@ async function connectToMongoDB() {
         return res.status(403).send({ message: "forbidden access" });
       }
       next();
+    };
+
+    const logTracking = async (trackingId, status) => {
+      const log = {
+        trackingId,
+        status,
+        details: status.split("-").join(" "),
+        createdAt: new Date(),
+      };
+      const result = await trackingsCollection.insertOne(log);
     };
 
     // user related apis
@@ -244,9 +255,11 @@ async function connectToMongoDB() {
       if (riderEmail) {
         query.riderEmail = riderEmail;
       }
-      if (deliveryStatus) {
-        query.deliveryStatus = { $in: ["delivery_assign", "rider-arriving"] };
+      if (deliveryStatus !== "parcel-delivered") {
+        // query.deliveryStatus = { $in: ["delivery_assign", "rider-arriving"] };
         query.deliveryStatus = { $nin: ["parcel-delivered"] };
+      } else {
+        query.deliveryStatus = deliveryStatus;
       }
       const cursor = parcelCollection.find(query);
       const result = await cursor.toArray();
@@ -423,6 +436,8 @@ async function connectToMongoDB() {
       const sessionId = req.query.session_id;
 
       const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+      // generate Tracking Id
       const trackingId = generateTrackingId();
 
       if (session.payment_status !== "paid") {
@@ -470,6 +485,9 @@ async function connectToMongoDB() {
 
         if (session.payment_status === "paid") {
           const resultPayment = await paymentCollection.insertOne(payment);
+
+          logTracking(trackingId, "pending-pickup");
+
           res.send({
             success: true,
             modifyParcel: result,
