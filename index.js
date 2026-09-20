@@ -274,12 +274,12 @@ async function connectToMongoDB() {
     });
 
     app.patch("/parcels/:id", async (req, res) => {
-      const { riderId, riderName, riderEmail } = req.body;
+      const { riderId, riderName, riderEmail, trackingId } = req.body;
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const parcelsUpdateDoc = {
         $set: {
-          deliveryStatus: "delivery_assign",
+          deliveryStatus: "driver_assigned",
           riderId: riderId,
           riderName: riderName,
           riderEmail: riderEmail,
@@ -298,11 +298,15 @@ async function connectToMongoDB() {
         riderQuery,
         riderUpdateDoc,
       );
+
+      // log Tracking
+      logTracking(trackingId, "driver_assigned");
+
       res.send(riderResult, result);
     });
 
     app.patch("/parcels/:id/status", async (req, res) => {
-      const { deliveryStatus, riderId } = req.body;
+      const { deliveryStatus, riderId, trackingId } = req.body;
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -325,6 +329,9 @@ async function connectToMongoDB() {
       }
 
       const result = await parcelCollection.updateOne(query, updatedDoc);
+
+      // log tracking
+      logTracking(trackingId, deliveryStatus);
       res.send(result);
     });
 
