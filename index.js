@@ -245,6 +245,9 @@ async function connectToMongoDB() {
 
     app.post("/parcels", async (req, res) => {
       const parcel = req.body;
+      const trackingId = generateTrackingId();
+      parcel.createdAt = new Date();
+      parcel.trackingId = trackingId;
       const result = await parcelCollection.insertOne(parcel);
       res.send(result);
     });
@@ -256,7 +259,7 @@ async function connectToMongoDB() {
         query.riderEmail = riderEmail;
       }
       if (deliveryStatus !== "parcel-delivered") {
-        // query.deliveryStatus = { $in: ["delivery_assign", "rider-arriving"] };
+        query.deliveryStatus = { $in: ["delivery_assign", "rider-arriving"] };
         query.deliveryStatus = { $nin: ["parcel-delivered"] };
       } else {
         query.deliveryStatus = deliveryStatus;
@@ -279,7 +282,7 @@ async function connectToMongoDB() {
       const query = { _id: new ObjectId(id) };
       const parcelsUpdateDoc = {
         $set: {
-          deliveryStatus: "driver_assigned",
+          deliveryStatus: "driver-assigned",
           riderId: riderId,
           riderName: riderName,
           riderEmail: riderEmail,
@@ -300,7 +303,7 @@ async function connectToMongoDB() {
       );
 
       // log Tracking
-      logTracking(trackingId, "driver_assigned");
+      logTracking(trackingId, "driver-assigned");
 
       res.send(riderResult, result);
     });
@@ -344,7 +347,7 @@ async function connectToMongoDB() {
       // parcel update
       const parcelUpdateDoc = {
         $set: {
-          deliveryStatus: "pending-pickup",
+          deliveryStatus: "parcel-paid",
         },
         $unset: {
           riderEmail: "",
@@ -401,6 +404,7 @@ async function connectToMongoDB() {
         metadata: {
           parcelId: paymentInfo.parcelId,
           parcelName: paymentInfo.parcelName,
+          trackingId: paymentInfo.trackingId,
         },
         customer_email: paymentInfo.senderEmail,
         success_url: `${process.env.SIDE_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
@@ -410,8 +414,7 @@ async function connectToMongoDB() {
       res.send({ url: section.url });
     });
 
-    // old payment section
-
+    // old payment section**
     // app.post("/create-checkout-session", async (req, res) => {
     //   const paymentInfo = req.body;
 
@@ -444,8 +447,8 @@ async function connectToMongoDB() {
 
       const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-      // generate Tracking Id
-      const trackingId = generateTrackingId();
+      // use the previous tracking Id
+      const trackingId = session.metadata.trackingId;
 
       if (session.payment_status !== "paid") {
         return res.send({
@@ -461,7 +464,6 @@ async function connectToMongoDB() {
         return res.send({
           message: "this payment already exist",
           transactionId: paymentExist.transactionId,
-          trackingId: paymentExist.trackingId,
         });
       }
 
@@ -471,7 +473,7 @@ async function connectToMongoDB() {
         const update = {
           $set: {
             paymentStatus: "paid",
-            deliveryStatus: "pending-pickup",
+            deliveryStatus: "parcel-paid",
             trackingId: trackingId,
           },
         };
@@ -493,7 +495,7 @@ async function connectToMongoDB() {
         if (session.payment_status === "paid") {
           const resultPayment = await paymentCollection.insertOne(payment);
 
-          logTracking(trackingId, "pending-pickup");
+          logTracking(trackingId, "parcel-paid");
 
           res.send({
             success: true,
@@ -509,7 +511,6 @@ async function connectToMongoDB() {
     });
 
     // payments related apis
-
     app.get("/payments", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
       const query = {};
@@ -522,6 +523,14 @@ async function connectToMongoDB() {
       }
       const cursor = paymentCollection.find(query).sort({ createdAt: -1 });
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // tracking related apis
+    app.get("/trackings/:trackingId/logs", async (req, res) => {
+      const trackingId = req.params.trackingId;
+      const query = { trackingId };
+      const result = await trackingsCollection.find(query).toArray();
       res.send(result);
     });
 
