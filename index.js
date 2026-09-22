@@ -175,6 +175,19 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
+    app.get("/riders/delivery-par-day", async (req, res) => {
+      const email = req.query.email;
+      const pipeline = [
+        {
+          $match: {
+            riderEmail: email,
+          },
+        },
+      ];
+      const result = await parcelCollection.aggregate(pipeline).toArray();
+      res.send(result);
+    });
+
     app.get("/riders", async (req, res) => {
       const { status, district, workStatus } = req.query;
       const query = {};
@@ -250,6 +263,13 @@ async function connectToMongoDB() {
           $group: {
             _id: "$deliveryStatus",
             count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            status: "$_id",
+            count: 1,
+            _id: 0,
           },
         },
       ];
