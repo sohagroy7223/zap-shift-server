@@ -9,6 +9,7 @@ const port = process.env.PORT || 3000;
 const crypto = require("crypto");
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
+const { count } = require("console");
 
 const serviceAccount = {
   type: process.env.FIREBASE_TYPE,
@@ -240,6 +241,19 @@ async function connectToMongoDB() {
 
       const cursor = parcelCollection.find(query, options);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/parcels/delivery-status/status", async (req, res) => {
+      const pipeline = [
+        {
+          $group: {
+            _id: "$deliveryStatus",
+            count: { $sum: 1 },
+          },
+        },
+      ];
+      const result = await parcelCollection.aggregate(pipeline).toArray();
       res.send(result);
     });
 
