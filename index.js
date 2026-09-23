@@ -179,7 +179,6 @@ async function connectToMongoDB() {
       const email = req.query.email;
 
       const pipeline = [
-        // 1. Get this rider's delivered parcels
         {
           $match: {
             riderEmail: email,
@@ -187,22 +186,36 @@ async function connectToMongoDB() {
           },
         },
 
-        // 2. Get tracking information
         {
           $lookup: {
             from: "trackings",
-            localField: "trackingId",
-            foreignField: "trackingId",
+            let: {
+              trackingId: "$trackingId",
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      {
+                        $eq: ["$trackingId", "$$trackingId"],
+                      },
+                      {
+                        $eq: ["$status", "parcel-delivered"],
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
             as: "parcel_tracking",
           },
         },
 
-        // 3. Remove the parcel_tracking array
         {
           $unwind: "$parcel_tracking",
         },
 
-        // 4. Count parcels by day
         {
           $group: {
             _id: {
@@ -217,12 +230,17 @@ async function connectToMongoDB() {
           },
         },
 
-        // 5. Make the response easy to use
         {
           $project: {
             _id: 0,
             date: "$_id",
             parcelDelivered: 1,
+          },
+        },
+
+        {
+          $sort: {
+            date: 1,
           },
         },
       ];
