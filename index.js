@@ -175,16 +175,60 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
-    app.get("/riders/delivery-par-day", async (req, res) => {
+    app.get("/riders/delivery-per-day", async (req, res) => {
       const email = req.query.email;
+
       const pipeline = [
+        // 1. Get this rider's delivered parcels
         {
           $match: {
             riderEmail: email,
+            deliveryStatus: "parcel-delivered",
+          },
+        },
+
+        // 2. Get tracking information
+        {
+          $lookup: {
+            from: "trackings",
+            localField: "trackingId",
+            foreignField: "trackingId",
+            as: "parcel_tracking",
+          },
+        },
+
+        // 3. Remove the parcel_tracking array
+        {
+          $unwind: "$parcel_tracking",
+        },
+
+        // 4. Count parcels by day
+        {
+          $group: {
+            _id: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$parcel_tracking.createdAt",
+              },
+            },
+            parcelDelivered: {
+              $sum: 1,
+            },
+          },
+        },
+
+        // 5. Make the response easy to use
+        {
+          $project: {
+            _id: 0,
+            date: "$_id",
+            parcelDelivered: 1,
           },
         },
       ];
+
       const result = await parcelCollection.aggregate(pipeline).toArray();
+
       res.send(result);
     });
 
