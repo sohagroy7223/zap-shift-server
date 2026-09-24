@@ -276,35 +276,30 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
-    app.patch(
-      "/riders/:id",
-      verifyRider,
-      verifyFirebaseToken,
-      async (req, res) => {
-        const status = req.body.status;
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const update = {
+    app.patch("/riders/:id", verifyFirebaseToken, async (req, res) => {
+      const status = req.body.status;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          status: status,
+          workStatus: "available",
+        },
+      };
+      const result = await ridersCollection.updateOne(query, update);
+      if (status === "approved") {
+        const email = req.body.email;
+        const query = { email };
+        const updateUser = {
           $set: {
-            status: status,
-            workStatus: "available",
+            role: "rider",
           },
         };
-        const result = await ridersCollection.updateOne(query, update);
-        if (status === "approved") {
-          const email = req.body.email;
-          const query = { email };
-          const updateUser = {
-            $set: {
-              role: "rider",
-            },
-          };
-          const userResult = await userCollection.updateOne(query, updateUser);
-          // res.send(userResult);
-        }
-        res.send(result);
-      },
-    );
+        const userResult = await userCollection.updateOne(query, updateUser);
+        // res.send(userResult);
+      }
+      res.send(result);
+    });
 
     app.delete("/riders/:id", async (req, res) => {
       const id = req.params.id;
