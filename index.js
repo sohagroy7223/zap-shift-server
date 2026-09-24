@@ -259,7 +259,7 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
-    app.get("/riders", verifyRider, async (req, res) => {
+    app.get("/riders", async (req, res) => {
       const { status, district, workStatus } = req.query;
       const query = {};
       if (status) {
