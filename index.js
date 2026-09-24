@@ -91,6 +91,15 @@ async function connectToMongoDB() {
       }
       next();
     };
+    const verifyRider = async (req, res, next) => {
+      const email = req.tokenEmail;
+      const query = { email };
+      const user = await userCollection.findOne(query);
+      if (!user || user.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
 
     const logTracking = async (trackingId, status) => {
       const log = {
@@ -162,7 +171,7 @@ async function connectToMongoDB() {
     );
 
     // riders relayed apis
-    app.post("/riders", async (req, res) => {
+    app.post("/riders", verifyRider, async (req, res) => {
       const rider = req.body;
       const email = rider.email;
       rider.status = "pending";
@@ -250,7 +259,7 @@ async function connectToMongoDB() {
       res.send(result);
     });
 
-    app.get("/riders", async (req, res) => {
+    app.get("/riders", verifyRider, async (req, res) => {
       const { status, district, workStatus } = req.query;
       const query = {};
       if (status) {
